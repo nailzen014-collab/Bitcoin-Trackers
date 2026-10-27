@@ -158,11 +158,17 @@ postman spec lint "postman\openapi.yaml" --issueType syntax
 
 ## Screenshot Bukti Praktik
 
-Screenshot dokumentasi publik yang sudah tersedia:
+### Dokumentasi publik Postman
 
 ![Dokumentasi publik Bitcoin Tracker di Postman](postman-api-documentation/screenshots/public-docs.png)
 
-Screenshot request berhasil dan overview collection belum disimpan di repository, jadi belum ditampilkan di sini. Ikuti [panduan screenshot](postman-api-documentation/screenshots/README.md) untuk menambahkannya.
+### Request Twilio — 404 Not Found
+
+![Request Twilio mengembalikan 404 Not Found](postman-api-documentation/screenshots/twilio-404-not-found.png)
+
+Screenshot ini menunjukkan request Twilio gagal dengan status **404 Not Found**, bukan bukti SMS berhasil terkirim. Periksa Account SID dan URL request sebelum mencoba lagi.
+
+Panduan screenshot lainnya ada di [folder screenshots](postman-api-documentation/screenshots/README.md).
 
 ## Keamanan
 
