@@ -158,28 +158,11 @@ postman spec lint "postman\openapi.yaml" --issueType syntax
 
 ## Screenshot Bukti Praktik
 
-Screenshot diambil langsung dari aplikasi Postman (Cloud view, workspace **Nail's Workspace**) pada 27 Oktober 2026. Tidak ada nilai rahasia yang ditampilkan.
+Screenshot dokumentasi publik yang sudah tersedia:
 
-### 1. Request berhasil dijalankan
+![Dokumentasi publik Bitcoin Tracker di Postman](postman-api-documentation/screenshots/public-docs.png)
 
-![Request Get Bitcoin Exchange Rate berhasil dengan status 200 OK](postman-api-documentation/screenshots/request-200-ok.png)
-
-- `GET https://api.coinbase.com/v2/prices/BTC-{{targetCurrency}}/spot`
-- Status **200 OK**, waktu respons **377 ms**
-- `currentRate` terisi `79543.825`, `alertTriggered` bernilai `false`
-- `smsBody` otomatis terisi oleh pre-request script
-- Environment **Bitcoin Tracker** aktif, dengan variabel rahasia Twilio dikosongkan
-
-### 2. Collection dan dokumentasi terbit
-
-![Overview collection Bitcoin Tracker dengan badge Docs published](screenshots/collection-overview.png)
-
-- Collection **Bitcoin Tracker** berisi dua request: *Get Bitcoin Exchange Rate* dan *SMS via Twilio*
-- Badge **Docs published** menandakan dokumentasi sudah dipublikasikan
-- Panel kanan menampilkan environment **Bitcoin Tracker** (`targetRate` = `9000`, `targetCurrency` = `USD`)
-- Setiap request punya contoh respons: `200 OK` nyata, `201 Created` (contoh dokumentasi Twilio), dan `401 Unauthorized` (hasil uji kredensial dummy)
-
-Panduan pengambilan screenshot ada di [`screenshots/README.md`](screenshots/README.md).
+Screenshot request berhasil dan overview collection belum disimpan di repository, jadi belum ditampilkan di sini. Ikuti [panduan screenshot](postman-api-documentation/screenshots/README.md) untuk menambahkannya.
 
 ## Keamanan
 
