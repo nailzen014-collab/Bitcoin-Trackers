@@ -162,7 +162,7 @@ Screenshot diambil langsung dari aplikasi Postman (Cloud view, workspace **Nail'
 
 ### 1. Request berhasil dijalankan
 
-![Request Get Bitcoin Exchange Rate berhasil dengan status 200 OK](screenshots/request-200-ok.png)
+![Request Get Bitcoin Exchange Rate berhasil dengan status 200 OK](postman-api-documentation/screenshots/request-200-ok.png)
 
 - `GET https://api.coinbase.com/v2/prices/BTC-{{targetCurrency}}/spot`
 - Status **200 OK**, waktu respons **377 ms**
