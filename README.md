@@ -158,6 +158,10 @@ postman spec lint "postman\openapi.yaml" --issueType syntax
 
 ## Screenshot Bukti Praktik
 
+### Request Bitcoin berhasil — 200 OK
+
+![Request Get Bitcoin Exchange Rate berhasil dengan status 200 OK](postman-api-documentation/screenshots/request-200-ok.png)
+
 ### Dokumentasi publik Postman
 
 ![Dokumentasi publik Bitcoin Tracker di Postman](postman-api-documentation/screenshots/public-docs.png)
@@ -196,7 +200,8 @@ Panduan screenshot lainnya ada di [folder screenshots](postman-api-documentation
 - [x] Contoh respons nyata tersedia untuk request harga.
 - [x] Spesifikasi OpenAPI tersedia.
 - [x] README menjelaskan cara import dan menjalankan.
-- [ ] Screenshot asli Postman disimpan sebagai `screenshots/request-200-ok.png` dan `screenshots/collection-overview.png`.
+- [x] Screenshot request `200 OK` disimpan sebagai `screenshots/request-200-ok.png`.
+- [ ] Screenshot overview collection disimpan sebagai `screenshots/collection-overview.png`.
 - [x] Dokumentasi Postman dipublikasikan dan URL dicatat.
 - [ ] Repository di-push ke GitHub.
 - [ ] URL repository dimasukkan ke kolom pengumpulan Quest Room.

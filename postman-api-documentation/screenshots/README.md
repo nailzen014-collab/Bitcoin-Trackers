@@ -6,7 +6,7 @@ Folder ini menyimpan screenshot bukti praktik yang sudah tersedia dan screenshot
 
 | Nama file | Isi yang difoto | Status |
 | --- | --- | --- |
-| `request-200-ok.png` | Request **Get Bitcoin Exchange Rate** setelah **Send**, menampilkan status `200 OK`, body JSON harga BTC, dan panel variabel environment. | Wajib. |
+| `request-200-ok.png` | Request **Get Bitcoin Exchange Rate** setelah **Send**, menampilkan status `200 OK`, body JSON harga BTC, dan panel variabel environment. | Tersedia. |
 | `collection-overview.png` | Overview collection **Bitcoin Tracker** dengan badge **Docs published** dan daftar dua request beserta contoh respons. | Wajib. |
 | `public-docs.png` | Halaman dokumentasi publik di `https://documenter.getpostman.com/view/58884262/2sBYHVudef`. | Tersedia. |
 | `twilio-404-not-found.png` | Request SMS Twilio yang mengembalikan `404 Not Found`; ini bukti kendala, bukan pengiriman yang berhasil. | Tersedia. |
