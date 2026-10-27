@@ -1,0 +1,16 @@
+# Secret / local files
+.env
+.env.*
+!.env.example
+*.local
+*.local.json
+postman/*.filled.json
+
+# Dependencies
+node_modules/
+vendor/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini

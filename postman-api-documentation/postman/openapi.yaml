@@ -1,0 +1,300 @@
+openapi: 3.0.3
+
+info:
+  title: Bitcoin Tracker - External API Contract
+  version: 1.0.0
+  description: |
+    Spesifikasi OpenAPI ini mendokumentasikan dua endpoint eksternal yang dipakai
+    oleh collection Postman **Bitcoin Tracker**:
+
+    1. `GET /v2/prices/{currencyPair}/spot` di Coinbase untuk mengambil harga BTC.
+    2. `POST /2010-04-01/Accounts/{AccountSid}/Messages.json` di Twilio untuk mengirim SMS.
+
+    Spesifikasi ini bukan API milik proyek. Ini adalah kontrak pihak ketiga yang
+    dipakai proyek, didokumentasikan agar request, parameter, dan bentuk respons
+    mudah dipahami serta bisa diimpor ke Postman.
+
+    Collection Postman yang setara: `Bitcoin-Tracker.postman_collection.json`.
+  termsOfService: https://www.coinbase.com/legal/user_agreement
+  contact:
+    name: Quest Room - Pertemuan 20
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+tags:
+  - name: Bitcoin Price
+    description: Endpoint harga Bitcoin dari Coinbase.
+  - name: SMS
+    description: Endpoint pengiriman SMS dari Twilio.
+
+paths:
+  /v2/prices/{currencyPair}/spot:
+    get:
+      tags:
+        - Bitcoin Price
+      summary: Get Bitcoin Exchange Rate
+      description: |
+        Mengambil harga spot 1 BTC dalam mata uang target.
+
+        Endpoint ini tidak memerlukan autentikasi. Harga dapat berubah setiap saat.
+      operationId: getBitcoinExchangeRate
+      servers:
+        - url: https://api.coinbase.com
+          description: Coinbase production API
+      parameters:
+        - name: currencyPair
+          in: path
+          required: true
+          description: Pasangan mata uang dengan format `BASE-QUOTE`. Collection memakai `BTC-USD`.
+          schema:
+            type: string
+            enum:
+              - BTC-USD
+          example: BTC-USD
+      responses:
+        '200':
+          description: Harga spot berhasil diambil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CoinbaseSpotPriceResponse'
+              examples:
+                realResponse:
+                  summary: Respons nyata saat pengujian (27 Oktober 2026)
+                  value:
+                    data:
+                      amount: '79690.805'
+                      base: BTC
+                      currency: USD
+        '429':
+          description: |
+            Terlalu banyak request. Coinbase dapat menerapkan rate limit.
+            Bentuk body error tidak disertakan karena belum diverifikasi pada praktik ini.
+
+  /2010-04-01/Accounts/{AccountSid}/Messages.json:
+    post:
+      tags:
+        - SMS
+      summary: SMS via Twilio
+      description: |
+        Membuat pesan SMS baru melalui Twilio Programmable Messaging API.
+
+        Endpoint memakai HTTP Basic Auth: `AccountSid` sebagai username dan
+        `AuthToken` sebagai password. Nilai asli tidak boleh ditulis di repository.
+      operationId: sendSmsViaTwilio
+      servers:
+        - url: https://api.twilio.com
+          description: Twilio production API
+      security:
+        - TwilioBasicAuth: []
+      parameters:
+        - name: AccountSid
+          in: path
+          required: true
+          description: Twilio Account SID yang diawali `AC`.
+          schema:
+            type: string
+            pattern: '^AC[0-9a-fA-F]{32}$'
+          example: ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TwilioSendMessageRequest'
+            examples:
+              bitcoinAlert:
+                summary: Contoh body dari collection
+                value:
+                  To: '+620000000000'
+                  From: '+620000000000'
+                  Body: 'Bitcoin Tracker: harga BTC 79690.805 USD (target 9000).'
+      responses:
+        '201':
+          description: Pesan berhasil dibuat dan masuk antrean Twilio.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TwilioMessage'
+              examples:
+                documentedShape:
+                  summary: Bentuk respons sesuai dokumentasi Twilio (belum dieksekusi dengan kredensial asli)
+                  value:
+                    sid: SMxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+                    date_created: 'Tue, 27 Oct 2026 03:51:07 +0000'
+                    date_updated: 'Tue, 27 Oct 2026 03:51:07 +0000'
+                    date_sent: null
+                    account_sid: ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+                    to: '+620000000000'
+                    from: '+620000000000'
+                    messaging_service_sid: null
+                    body: 'Bitcoin Tracker: harga BTC 79690.805 USD (target 9000).'
+                    status: queued
+                    num_segments: '1'
+                    num_media: '0'
+                    direction: outbound-api
+                    api_version: '2010-04-01'
+                    price: null
+                    price_unit: USD
+                    error_code: null
+                    error_message: null
+                    uri: /2010-04-01/Accounts/ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/Messages/SMxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.json
+                    subresource_uris:
+                      media: /2010-04-01/Accounts/ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/Messages/SMxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/Media.json
+        '400':
+          description: |
+            Parameter tidak valid, misalnya nomor bukan format E.164 atau field wajib kosong.
+            Bentuk body error tidak disertakan karena belum diverifikasi pada praktik ini.
+        '401':
+          description: Account SID atau Auth Token salah, atau akun tidak ditemukan.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TwilioError'
+              examples:
+                realAuthError:
+                  summary: Respons nyata dengan kredensial dummy
+                  value:
+                    code: 20003
+                    message: auth account AC00000000000000000000000000000000 does not exist
+                    more_info: https://www.twilio.com/docs/errors/20003
+                    status: 401
+
+components:
+  securitySchemes:
+    TwilioBasicAuth:
+      type: http
+      scheme: basic
+      description: |
+        Basic Auth memakai Twilio Account SID sebagai username dan Auth Token
+        sebagai password. Simpan nilainya di environment Postman atau secret
+        manager, bukan di file yang di-commit.
+
+  schemas:
+    CoinbaseSpotPriceResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          required:
+            - amount
+            - base
+            - currency
+          properties:
+            amount:
+              type: string
+              description: Harga spot sebagai string desimal.
+              example: '79690.805'
+            base:
+              type: string
+              description: Mata uang yang dihargai.
+              enum:
+                - BTC
+              example: BTC
+            currency:
+              type: string
+              description: Mata uang pembanding.
+              example: USD
+
+    TwilioSendMessageRequest:
+      type: object
+      required:
+        - To
+        - From
+        - Body
+      properties:
+        To:
+          type: string
+          description: Nomor tujuan format E.164.
+          example: '+620000000000'
+        From:
+          type: string
+          description: Nomor pengirim Twilio format E.164.
+          example: '+620000000000'
+        Body:
+          type: string
+          description: Isi pesan SMS.
+          maxLength: 1600
+          example: 'Bitcoin Tracker: harga BTC 79690.805 USD (target 9000).'
+
+    TwilioMessage:
+      type: object
+      required:
+        - sid
+        - status
+      properties:
+        sid:
+          type: string
+          description: ID pesan Twilio.
+          pattern: '^SM[0-9a-fA-F]{32}$'
+          example: SMxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+        account_sid:
+          type: string
+          example: ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+        to:
+          type: string
+          example: '+620000000000'
+        from:
+          type: string
+          example: '+620000000000'
+        body:
+          type: string
+          example: 'Bitcoin Tracker: harga BTC 79690.805 USD (target 9000).'
+        status:
+          type: string
+          enum:
+            - queued
+            - sent
+            - delivered
+            - failed
+            - undelivered
+          example: queued
+        direction:
+          type: string
+          example: outbound-api
+        num_segments:
+          type: string
+          example: '1'
+        error_code:
+          type: integer
+          nullable: true
+          example: null
+        error_message:
+          type: string
+          nullable: true
+          example: null
+        date_created:
+          type: string
+          example: 'Tue, 27 Oct 2026 03:51:07 +0000'
+        date_sent:
+          type: string
+          nullable: true
+          example: null
+
+    TwilioError:
+      type: object
+      required:
+        - code
+        - message
+        - status
+      properties:
+        code:
+          type: integer
+          example: 20003
+        message:
+          type: string
+          example: auth account AC00000000000000000000000000000000 does not exist
+        more_info:
+          type: string
+          format: uri
+          example: https://www.twilio.com/docs/errors/20003
+        status:
+          type: integer
+          example: 401
+
+externalDocs:
+  description: Dokumentasi resmi OpenAPI Specification
+  url: https://spec.openapis.org/oas/v3.0.3

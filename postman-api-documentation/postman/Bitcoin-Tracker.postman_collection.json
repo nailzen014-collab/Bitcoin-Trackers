@@ -1,0 +1,388 @@
+{
+  "info": {
+    "_postman_id": "ace95fee-d459-4817-924e-5ff62f4a226c",
+    "name": "Bitcoin Tracker",
+    "description": "# Bitcoin Tracker\n\nCollection ini mendokumentasikan dua request API yang dipakai untuk memantau harga Bitcoin dan mengirim notifikasi SMS melalui Twilio ketika harga berada di bawah target.\n\n## Quick Start\n\n1. Import `Bitcoin-Tracker.postman_collection.json` ke Postman.\n2. Import `Bitcoin-Tracker.postman_environment.json`, lalu pilih environment **Bitcoin Tracker** di kanan atas.\n3. Isi variabel rahasia secara lokal: `twilioAccountSid`, `twilioAuthToken`, `twilioFrom`, dan `smsTo`. Jangan pernah commit nilai aslinya.\n4. Jalankan request **1. Get Bitcoin Exchange Rate**. Request ini menyimpan harga terakhir ke variabel `currentRate`.\n5. Jika ingin mencoba pengiriman SMS, jalankan **2. SMS via Twilio**. Request ini memakai `currentRate`, `targetRate`, dan kredensial Twilio dari environment.\n\n## Variabel\n\n| Variabel | Scope | Wajib | Rahasia | Keterangan |\n| --- | --- | --- | --- | --- |\n| `targetRate` | Environment | Ya | Tidak | Harga target dalam mata uang yang dipantau. Contoh: `9000`. |\n| `targetCurrency` | Environment | Ya | Tidak | Mata uang target, dipakai di path Coinbase. Default: `USD`. |\n| `twilioAccountSid` | Environment | Ya (untuk SMS) | Ya | Account SID Twilio. |\n| `twilioAuthToken` | Environment | Ya (untuk SMS) | Ya | Auth Token Twilio. |\n| `twilioFrom` | Environment | Ya (untuk SMS) | Ya | Nomor pengirim yang terdaftar di Twilio. |\n| `smsTo` | Environment | Ya (untuk SMS) | Ya | Nomor tujuan SMS. |\n| `currentRate` | Collection | Otomatis | Tidak | Diisi oleh test script request pertama. |\n| `alertTriggered` | Collection | Otomatis | Tidak | `true` jika harga < `targetRate`. |\n| `smsBody` | Collection | Otomatis | Tidak | Body SMS yang disusun oleh pre-request script. |\n\n## Alur Kerja\n\n1. **Get Bitcoin Exchange Rate** memanggil Coinbase Spot Price API, memvalidasi respons, lalu menyimpan `currentRate` dan `alertTriggered`.\n2. **SMS via Twilio** menyusun body SMS dari `currentRate` dan `targetRate`, lalu mengirim pesan melalui Twilio Messages API.\n\n## Catatan\n\n- Endpoint harga memakai Coinbase karena endpoint CoinDesk lama (`api.coindesk.com`) sudah tidak dipakai.\n- Contoh respons `200` pada request pertama adalah respons nyata saat pengujian (27 Oktober 2026). Harga selalu berubah, jadi nilainya bisa berbeda saat kamu menjalankan ulang.\n- Contoh respons `201` pada request SMS adalah bentuk respons sesuai dokumentasi Twilio dan **belum** dieksekusi dengan kredensial asli. Contoh respons `401` adalah respons nyata saat diuji dengan kredensial dummy.\n- Jangan menampilkan nilai rahasia saat memublikasikan dokumentasi Postman. Gunakan environment terpisah atau kosongkan nilai rahasia sebelum publish.\n\n## Dokumentasi Lengkap\n\nBuka collection di Postman, klik menu **...** di samping nama collection, lalu pilih **View complete collection documentation**. Dokumentasi yang sama juga tersedia versi statisnya di `README.md` repository.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Get Bitcoin Exchange Rate",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status 200 OK\", function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "var body = pm.response.json();",
+              "",
+              "pm.test(\"Respons berisi objek data\", function () {",
+              "  pm.expect(body).to.have.property(\"data\");",
+              "  pm.expect(body.data).to.have.property(\"amount\");",
+              "  pm.expect(body.data).to.have.property(\"base\", \"BTC\");",
+              "  pm.expect(body.data).to.have.property(\"currency\");",
+              "});",
+              "",
+              "var rate = Number(body.data.amount);",
+              "pm.test(\"amount adalah angka valid dan lebih dari 0\", function () {",
+              "  pm.expect(Number.isFinite(rate)).to.be.true;",
+              "  pm.expect(rate).to.be.above(0);",
+              "});",
+              "",
+              "pm.collectionVariables.set(\"currentRate\", body.data.amount);",
+              "",
+              "var rawTarget = pm.environment.get(\"targetRate\") || pm.collectionVariables.get(\"targetRate\");",
+              "pm.test(\"targetRate tersedia dan berupa angka\", function () {",
+              "  pm.expect(rawTarget, \"Isi targetRate pada environment Bitcoin Tracker\").to.not.be.undefined;",
+              "  pm.expect(Number.isFinite(Number(rawTarget)), \"targetRate harus berupa angka\").to.be.true;",
+              "});",
+              "",
+              "if (Number.isFinite(Number(rawTarget))) {",
+              "  var target = Number(rawTarget);",
+              "  var triggered = rate < target;",
+              "  pm.collectionVariables.set(\"alertTriggered\", String(triggered));",
+              "  pm.test(\"alertTriggered dihitung dari harga terhadap target\", function () {",
+              "    pm.expect([\"true\", \"false\"]).to.include(String(triggered));",
+              "  });",
+              "  console.log(\"Harga BTC: \" + rate + \" \" + body.data.currency + \" | target: \" + target + \" | alert: \" + triggered);",
+              "}",
+              "",
+              "pm.test(\"Mata uang respons sesuai targetCurrency\", function () {",
+              "  var expectedCurrency = pm.environment.get(\"targetCurrency\");",
+              "  if (expectedCurrency) {",
+              "    pm.expect(body.data.currency).to.eql(expectedCurrency);",
+              "  }",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "https://api.coinbase.com/v2/prices/BTC-{{targetCurrency}}/spot",
+          "protocol": "https",
+          "host": [
+            "api",
+            "coinbase",
+            "com"
+          ],
+          "path": [
+            "v2",
+            "prices",
+            "BTC-{{targetCurrency}}",
+            "spot"
+          ]
+        },
+        "description": "# Get Bitcoin Exchange Rate\n\nMengambil harga spot 1 BTC dalam mata uang target dari Coinbase Exchange Rates API.\n\n- **Method:** `GET`\n- **URL:** `https://api.coinbase.com/v2/prices/BTC-{{targetCurrency}}/spot`\n- **Auth:** tidak perlu API key\n- **Rate limit:** mengikuti kebijakan Coinbase; jangan menjalankan request berulang tanpa jeda.\n\n## Path parameter\n\n| Parameter | Contoh | Keterangan |\n| --- | --- | --- |\n| `targetCurrency` | `USD` | Mata uang target, diambil dari environment. |\n\n## Efek ke variabel collection\n\n- `currentRate` diisi dengan nilai `data.amount`.\n- `alertTriggered` diisi `true` jika `data.amount < targetRate`.\n\n## Contoh respons sukses\n\n```json\n{\n  \"data\": {\n    \"amount\": \"79690.805\",\n    \"base\": \"BTC\",\n    \"currency\": \"USD\"\n  }\n}\n```\n\nContoh di atas adalah respons nyata saat pengujian pada 27 Oktober 2026. Harga berubah setiap saat.",
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "response": [
+        {
+          "name": "200 OK - respons nyata (27 Okt 2026)",
+          "originalRequest": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "https://api.coinbase.com/v2/prices/BTC-USD/spot",
+              "protocol": "https",
+              "host": [
+                "api",
+                "coinbase",
+                "com"
+              ],
+              "path": [
+                "v2",
+                "prices",
+                "BTC-USD",
+                "spot"
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n  \"data\": {\n    \"amount\": \"79690.805\",\n    \"base\": \"BTC\",\n    \"currency\": \"USD\"\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "2. SMS via Twilio",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var rate = pm.collectionVariables.get(\"currentRate\");",
+              "var currency = pm.environment.get(\"targetCurrency\") || \"USD\";",
+              "var target = pm.environment.get(\"targetRate\") || \"belum diatur\";",
+              "",
+              "pm.collectionVariables.set(",
+              "  \"smsBody\",",
+              "  \"Bitcoin Tracker: harga BTC \" + (rate || \"belum tersedia\") + \" \" + currency + \" (target \" + target + \").\"",
+              ");",
+              "",
+              "var required = [\"twilioAccountSid\", \"twilioAuthToken\", \"twilioFrom\", \"smsTo\"];",
+              "var missing = required.filter(function (key) {",
+              "  return !pm.environment.get(key);",
+              "});",
+              "",
+              "if (missing.length > 0) {",
+              "  console.warn(\"Variabel environment belum diisi: \" + missing.join(\", \") + \". Request akan gagal autentikasi atau validasi.\");",
+              "}",
+              "",
+              "console.log(\"Body SMS: \" + pm.collectionVariables.get(\"smsBody\"));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status 201 Created\", function () {",
+              "  pm.response.to.have.status(201);",
+              "});",
+              "",
+              "if (pm.response.code === 201) {",
+              "  var body = pm.response.json();",
+              "  pm.test(\"Respons berisi sid pesan\", function () {",
+              "    pm.expect(body).to.have.property(\"sid\");",
+              "    pm.expect(body.sid).to.match(/^SM/);",
+              "  });",
+              "  pm.test(\"Status pesan queued atau sent\", function () {",
+              "    pm.expect(body.status).to.be.oneOf([\"queued\", \"sent\"]);",
+              "  });",
+              "}",
+              "",
+              "if (pm.response.code === 401) {",
+              "  pm.test(\"401 berisi detail error autentikasi\", function () {",
+              "    var errorBody = pm.response.json();",
+              "    pm.expect(errorBody).to.have.property(\"code\");",
+              "    pm.expect(errorBody).to.have.property(\"message\");",
+              "    pm.expect(errorBody).to.have.property(\"status\", 401);",
+              "  });",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/x-www-form-urlencoded",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "To",
+              "value": "{{smsTo}}",
+              "type": "text"
+            },
+            {
+              "key": "From",
+              "value": "{{twilioFrom}}",
+              "type": "text"
+            },
+            {
+              "key": "Body",
+              "value": "{{smsBody}}",
+              "type": "text"
+            }
+          ]
+        },
+        "url": {
+          "raw": "https://api.twilio.com/2010-04-01/Accounts/{{twilioAccountSid}}/Messages.json",
+          "protocol": "https",
+          "host": [
+            "api",
+            "twilio",
+            "com"
+          ],
+          "path": [
+            "2010-04-01",
+            "Accounts",
+            "{{twilioAccountSid}}",
+            "Messages.json"
+          ]
+        },
+        "description": "# SMS via Twilio\n\nMengirim satu SMS berisi ringkasan harga Bitcoin melalui Twilio Programmable Messaging API.\n\n- **Method:** `POST`\n- **URL:** `https://api.twilio.com/2010-04-01/Accounts/{{twilioAccountSid}}/Messages.json`\n- **Auth:** Basic Auth (`twilioAccountSid` sebagai username, `twilioAuthToken` sebagai password)\n- **Content-Type:** `application/x-www-form-urlencoded`\n\n## Body parameter\n\n| Field | Sumber | Keterangan |\n| --- | --- | --- |\n| `To` | `smsTo` | Nomor tujuan format E.164, contoh `+62812xxxxxxx`. |\n| `From` | `twilioFrom` | Nomor Twilio yang sudah aktif. Pada akun trial, nomor tujuan harus terverifikasi. |\n| `Body` | `smsBody` | Diisi otomatis oleh pre-request script dari harga terakhir dan target. |\n\n## Prasyarat\n\n1. Jalankan request **Get Bitcoin Exchange Rate** lebih dulu agar `currentRate` terisi.\n2. Isi seluruh variabel Twilio pada environment.\n3. Pada akun trial Twilio, verifikasi nomor `smsTo` terlebih dahulu.\n\n## Status respons\n\n- `201 Created` - pesan diterima Twilio dan masuk antrean.\n- `401 Unauthorized` - Account SID/Auth Token salah atau akun tidak ada.\n- `400 Bad Request` - parameter tidak valid, misalnya nomor bukan format E.164.\n\n## Keamanan\n\nJangan menyimpan atau menampilkan Account SID, Auth Token, nomor pengirim, dan nomor tujuan asli di repository publik maupun dokumentasi publik.",
+        "auth": {
+          "type": "basic",
+          "basic": [
+            {
+              "key": "username",
+              "value": "{{twilioAccountSid}}",
+              "type": "string"
+            },
+            {
+              "key": "password",
+              "value": "{{twilioAuthToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": [
+        {
+          "name": "201 Created - contoh bentuk respons dokumentasi Twilio (belum dieksekusi)",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "To",
+                  "value": "{{smsTo}}"
+                },
+                {
+                  "key": "From",
+                  "value": "{{twilioFrom}}"
+                },
+                {
+                  "key": "Body",
+                  "value": "{{smsBody}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "https://api.twilio.com/2010-04-01/Accounts/{{twilioAccountSid}}/Messages.json",
+              "protocol": "https",
+              "host": [
+                "api",
+                "twilio",
+                "com"
+              ],
+              "path": [
+                "2010-04-01",
+                "Accounts",
+                "{{twilioAccountSid}}",
+                "Messages.json"
+              ]
+            }
+          },
+          "status": "Created",
+          "code": 201,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n  \"sid\": \"SMxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\",\n  \"date_created\": \"Tue, 27 Oct 2026 03:51:07 +0000\",\n  \"date_updated\": \"Tue, 27 Oct 2026 03:51:07 +0000\",\n  \"date_sent\": null,\n  \"account_sid\": \"ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\",\n  \"to\": \"+620000000000\",\n  \"from\": \"+620000000000\",\n  \"messaging_service_sid\": null,\n  \"body\": \"Bitcoin Tracker: harga BTC 79690.805 USD (target 9000).\",\n  \"status\": \"queued\",\n  \"num_segments\": \"1\",\n  \"num_media\": \"0\",\n  \"direction\": \"outbound-api\",\n  \"api_version\": \"2010-04-01\",\n  \"price\": null,\n  \"price_unit\": \"USD\",\n  \"error_code\": null,\n  \"error_message\": null,\n  \"uri\": \"/2010-04-01/Accounts/ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/Messages/SMxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.json\",\n  \"subresource_uris\": {\n    \"media\": \"/2010-04-01/Accounts/ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/Messages/SMxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/Media.json\"\n  }\n}"
+        },
+        {
+          "name": "401 Unauthorized - respons nyata dengan kredensial dummy",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "To",
+                  "value": "+620000000000"
+                },
+                {
+                  "key": "From",
+                  "value": "+620000000000"
+                },
+                {
+                  "key": "Body",
+                  "value": "test"
+                }
+              ]
+            },
+            "url": {
+              "raw": "https://api.twilio.com/2010-04-01/Accounts/AC00000000000000000000000000000000/Messages.json",
+              "protocol": "https",
+              "host": [
+                "api",
+                "twilio",
+                "com"
+              ],
+              "path": [
+                "2010-04-01",
+                "Accounts",
+                "AC00000000000000000000000000000000",
+                "Messages.json"
+              ]
+            }
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n  \"code\": 20003,\n  \"message\": \"auth account AC00000000000000000000000000000000 does not exist\",\n  \"more_info\": \"https://www.twilio.com/docs/errors/20003\",\n  \"status\": 401\n}"
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "currentRate",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "alertTriggered",
+      "value": "false",
+      "type": "string"
+    },
+    {
+      "key": "smsBody",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
